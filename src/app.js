@@ -14,6 +14,12 @@ dotenv.config();
 const participantJoi = joi.object({
   name: joi.string().required(),
 });
+const messageJoi = joi.object({
+    
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().valid("message", "private_message").required(),
+  });
 
 const PORT = 5000;
 
@@ -57,6 +63,7 @@ const PORT = 5000;
     });
 
     app.get("/participants", async (req, res) => {
+        console.log(req.headers)
         try {
           const participants = await db.collection("participants").find().toArray();
           res.send(participants);
@@ -64,6 +71,35 @@ const PORT = 5000;
           res.status(500).send(err.message);
         }
       });
+
+      app.post("/messages", async (req, res) => {
+        const { to, text, type } = req.body;
+        const { user } = req.headers;
+      
+        const validation = messageJoi.validate({ ...req.body, from: user });
+        if (validation.error) {
+          return res.status(422).send(validation.error.details.map((detail) => detail.message));
+        }
+      
+        try {
+          const participant = await db.collection("participants").findOne({ name: user });
+          if (!participant) {
+            return res.status(422);
+          }
+      
+          const timestamp = Date.now();
+          const time = dayjs(timestamp).format("HH:mm:ss");
+      
+          const message = {...req.body, from: user};
+      
+          await db.collection("messages").insertOne(message);
+      
+          res.sendStatus(201);
+        } catch (err) {
+          res.status(500).send(err.message);
+        }
+      });
+      
       
 
     app.listen(PORT, () => {
