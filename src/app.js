@@ -142,6 +142,34 @@ const PORT = 5000;
           res.status(500).send(err.message);
         }
       });
+    
+      setInterval(async () => {
+        const dezSegundos = Date.now() - 10000;
+      
+        try {
+          const inativos = await db
+            .collection("participants")
+            .find({ lastStatus: { $lt: dezSegundos } })
+            .toArray();
+      
+          if (inativos.length > 0) {
+            const mensagens = inativos.map((inativo) => {
+              return {
+                from: inativo.name,
+                to: "Todos",
+                text: "sai da sala...",
+                type: "status",
+                time: dayjs().format("HH:mm:ss"),
+              };
+            });
+      
+            await db.collection("messages").insertMany(mensagens);
+            await db.collection("participants").deleteMany({ lastStatus: { $lt: dezSegundos } })
+          }
+        } catch (err) {
+          console.log(err.message);
+        }
+      }, 15000);
       
 
     app.listen(PORT, () => {
