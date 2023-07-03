@@ -72,6 +72,23 @@ const PORT = 5000;
         }
       });
 
+      app.get("/messages", async (req, res) => {
+        const { user } = req.headers;
+      
+        try {
+          const messages = await db
+            .collection("messages")
+            .find({
+              $or: [{ from: user }, { to: { $in: ["Todos", user] } }, { type: "message" }],
+            })
+            .toArray();
+      
+          res.send(messages);
+        } catch (err) {
+          res.status(500).send(err.message);
+        }
+      });
+      
       app.post("/messages", async (req, res) => {
         try {
           const { user } = req.headers;
@@ -101,20 +118,6 @@ const PORT = 5000;
           res.status(500).send(err.message);
         }
       });
-      
-     
-    app.get("/messages", async (req, res) => {
-        const { user } = req.headers
-
-        try {
-            const messages = await db.collection("messages").find(
-                { $or: [{ from: user }, { to: { $in: ["Todos", user] } }, { type: "message" }] })
-        
-        } catch(err) {
-            res.status(500).send(err.message)
-        }
-
-    })
       
 
     app.listen(PORT, () => {
