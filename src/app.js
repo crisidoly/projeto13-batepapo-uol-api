@@ -74,13 +74,20 @@ const PORT = 5000;
 
       app.get("/messages", async (req, res) => {
         const { user } = req.headers;
-      
+        const { limit } = req.query
+        const numberLimit = Number(limit)
+
+        if (limit !== undefined &&  (numberLimit <= 0 || isNaN(numberLimit))) 
+        return res.sendStatus(422)
+
         try {
           const messages = await db
             .collection("messages")
             .find({
               $or: [{ from: user }, { to: { $in: ["Todos", user] } }, { type: "message" }],
             })
+            .limit(limit === undefined ? 0 : numberLimit)
+            .sort(({$natural:-1}))
             .toArray();
       
           res.send(messages);
@@ -114,6 +121,23 @@ const PORT = 5000;
           await db.collection("messages").insertOne(message);
       
           res.sendStatus(201);
+        } catch (err) {
+          res.status(500).send(err.message);
+        }
+      });
+      
+      app.post("/status", async (req, res) => {
+        const { user } = req.headers;
+      
+        if (!user) return res.sendStatus(404);
+      
+        try {
+          const result = await db
+            .collection("participants")
+            .updateOne({ name: user }, { $set: { lastStatus: Date.now() } });
+      
+          if (result.matchedCount === 0) return res.sendStatus(404);
+          res.sendStatus(200);
         } catch (err) {
           res.status(500).send(err.message);
         }
